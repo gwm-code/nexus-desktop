@@ -2,8 +2,9 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { 
-  NexusStatus, SwarmTask, ChatMessage, Agent, 
+import { invoke } from '@tauri-apps/api/core';
+import {
+  NexusStatus, SwarmTask, ChatMessage, Agent,
   MemoryStats, WatcherStatus, UserSettings,
   ConnectionStatus
 } from '../types';
@@ -207,19 +208,202 @@ export const useNexusStore = create<NexusState>()(
 
       addTerminalOutput: (output) => set((state) => ({ terminalHistory: [...state.terminalHistory, output] })),
 
-      // Stubs for build compatibility
-      initializeTauriListeners: () => {},
-      loadChatHistory: async () => {},
-      loadSwarmTasks: async () => {},
-      loadMemoryStats: async () => {},
-      loadWatcherStatus: async () => {},
-      checkNexusStatus: async () => {},
-      startSwarmTask: async (_description: string) => {},
-      executeCommand: async (_command: string, _dir?: string) => { return ""; },
-      initMemory: async () => {},
-      consolidateMemory: async () => {},
-      toggleNode: (_id: string) => {},
-      scanCurrentProject: async (_path?: string) => {},
+      // Business Logic Methods
+      initializeTauriListeners: () => {
+        // Event listeners for streaming etc. can be set up here
+        // For now, polling-based updates are used
+      },
+
+      loadChatHistory: async () => {
+        try {
+          const raw: string[] = await invoke('get_chat_history');
+          const messages: ChatMessage[] = raw.map((s) => {
+            try {
+              const parsed = JSON.parse(s);
+              return {
+                id: parsed.id,
+                role: parsed.role as ChatMessage['role'],
+                content: parsed.content,
+                timestamp: parsed.timestamp,
+                isStreaming: parsed.is_streaming || false,
+              };
+            } catch {
+              return null;
+            }
+          }).filter(Boolean) as ChatMessage[];
+          set({ chatHistory: messages });
+        } catch (e) {
+          console.error('Failed to load chat history:', e);
+        }
+      },
+
+      loadSwarmTasks: async () => {
+        try {
+          const swarmIds: string[] = await invoke('get_all_swarms');
+          const tasks: SwarmTask[] = swarmIds.map((id) => ({
+            id,
+            description: '',
+            status: 'completed' as const,
+            subtasks: [],
+            progress: 100,
+            createdAt: new Date().toISOString(),
+          }));
+          set({ swarmTasks: tasks });
+        } catch (e) {
+          console.error('Failed to load swarm tasks:', e);
+        }
+      },
+
+      loadMemoryStats: async () => {
+        try {
+          set((state) => ({ ui: { ...state.ui, isMemoryLoading: true } }));
+          const raw: string = await invoke('get_memory_stats');
+          const json = JSON.parse(raw);
+          if (json.success && json.data) {
+            const d = json.data;
+            set({
+              memoryStats: {
+                totalMemories: d.total_memories ?? 0,
+                eventsCount: d.events_count ?? 0,
+                graphEntities: d.graph_entities ?? 0,
+                vectorDocuments: d.vector_documents ?? 0,
+                sizeBytes: d.size_bytes ?? 0,
+                lastUpdated: new Date().toISOString(),
+              },
+            });
+          }
+        } catch (e) {
+          console.error('Failed to load memory stats:', e);
+        } finally {
+          set((state) => ({ ui: { ...state.ui, isMemoryLoading: false } }));
+        }
+      },
+
+      loadWatcherStatus: async () => {
+        try {
+          const raw: string = await invoke('get_watcher_status');
+          const json = JSON.parse(raw);
+          if (json.success && json.data) {
+            const d = json.data;
+            set({
+              watcherStatus: {
+                isRunning: d.is_running ?? false,
+                watchedProjects: d.watched_projects ?? 0,
+                activeLogSources: d.active_log_sources ?? 0,
+                errorsDetected: d.errors_detected ?? 0,
+                errorsFixed: d.errors_fixed ?? 0,
+                healingSessionsTotal: d.healing_sessions_total ?? 0,
+                healingSessionsActive: d.healing_sessions_active ?? 0,
+                startTime: d.start_time,
+              },
+            });
+          }
+        } catch (e) {
+          console.error('Failed to load watcher status:', e);
+        }
+      },
+
+      checkNexusStatus: async () => {
+        try {
+          set((state) => ({ backend: { ...state.backend, status: 'connecting' } }));
+          const status: NexusStatus = await invoke('get_nexus_status');
+          set({
+            nexusStatus: status,
+            isConnected: status.nexusInstalled || status.version !== 'Unknown',
+            backend: {
+              status: (status.nexusInstalled || status.version !== 'Unknown') ? 'connected' : 'disconnected',
+              error: null,
+            },
+          });
+        } catch (e) {
+          const errMsg = String(e);
+          set({
+            isConnected: false,
+            backend: { status: 'error', error: errMsg },
+          });
+        }
+      },
+
+      startSwarmTask: async (description: string) => {
+        try {
+          set((state) => ({ ui: { ...state.ui, isSwarmLoading: true } }));
+          const result: string = await invoke('start_swarm_task', { task: description });
+          const parsed = JSON.parse(result);
+          const newTask: SwarmTask = {
+            id: parsed.task_id || crypto.randomUUID(),
+            description,
+            status: 'completed',
+            subtasks: [],
+            progress: 100,
+            createdAt: new Date().toISOString(),
+          };
+          set((state) => ({ swarmTasks: [...state.swarmTasks, newTask] }));
+        } catch (e) {
+          console.error('Failed to start swarm task:', e);
+        } finally {
+          set((state) => ({ ui: { ...state.ui, isSwarmLoading: false } }));
+        }
+      },
+
+      executeCommand: async (command: string, dir?: string) => {
+        try {
+          const output: string = await invoke('execute_terminal_command', { command, dir });
+          return output;
+        } catch (e) {
+          const errMsg = String(e);
+          console.error('Command execution failed:', errMsg);
+          throw e;
+        }
+      },
+
+      initMemory: async () => {
+        try {
+          await invoke('memory_init');
+        } catch (e) {
+          console.error('Failed to init memory:', e);
+        }
+      },
+
+      consolidateMemory: async () => {
+        try {
+          await invoke('memory_consolidate');
+        } catch (e) {
+          console.error('Failed to consolidate memory:', e);
+        }
+      },
+
+      toggleNode: (id: string) => {
+        // Toggle a file tree node expand/collapse (local state only)
+        set((state) => {
+          const project = state.currentProject;
+          if (!project?.fileTree) return {};
+          const toggleInTree = (nodes: any[]): any[] =>
+            nodes.map((n) => {
+              if (n.id === id) return { ...n, isExpanded: !n.isExpanded };
+              if (n.children) return { ...n, children: toggleInTree(n.children) };
+              return n;
+            });
+          return {
+            currentProject: {
+              ...project,
+              fileTree: toggleInTree(project.fileTree),
+            },
+          };
+        });
+      },
+
+      scanCurrentProject: async (path?: string) => {
+        try {
+          const scanPath = path || get().currentProjectPath || '.';
+          const raw: string = await invoke('scan_project', { path: scanPath });
+          const json = JSON.parse(raw);
+          if (json.success && json.data) {
+            console.log('Project scanned:', json.data);
+          }
+        } catch (e) {
+          console.error('Failed to scan project:', e);
+        }
+      },
     }),
     {
       name: 'nexus-storage',

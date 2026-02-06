@@ -31,9 +31,88 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ onClose }) => {
   const [currentCommand, setCurrentCommand] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
 
+  // Refs to avoid stale closures in xterm.onData callback
+  const currentCommandRef = useRef('');
+  const isExecutingRef = useRef(false);
+  const executeCommandRef = useRef<((cmd: string, dir?: string) => Promise<string>) | null>(null);
+  const addTerminalOutputRef = useRef<((output: any) => void) | null>(null);
+  const currentProjectRef = useRef<any>(null);
+
   const terminalHistory = useTerminalHistory();
   const { executeCommand, addTerminalOutput, currentProject } = useNexusStore();
   const isConnected = useIsConnected();
+
+  // Sync refs with latest state/props
+  useEffect(() => { currentCommandRef.current = currentCommand; }, [currentCommand]);
+  useEffect(() => { isExecutingRef.current = isExecuting; }, [isExecuting]);
+  useEffect(() => { executeCommandRef.current = executeCommand; }, [executeCommand]);
+  useEffect(() => { addTerminalOutputRef.current = addTerminalOutput; }, [addTerminalOutput]);
+  useEffect(() => { currentProjectRef.current = currentProject; }, [currentProject]);
+
+  // Print prompt
+  const printPrompt = useCallback((xterm: XTerm) => {
+    const cwd = currentProjectRef.current?.path?.split('/').pop() || '~';
+    xterm.write(`\x1b[1;32mnexus\x1b[0m:\x1b[1;34m${cwd}\x1b[0m$ `);
+  }, []);
+
+  // Print welcome message
+  const printWelcomeMessage = useCallback((xterm: XTerm) => {
+    xterm.writeln('\x1b[1;34m╔══════════════════════════════════════════════════════════════╗\x1b[0m');
+    xterm.writeln('\x1b[1;34m║\x1b[0m           \x1b[1;36mNexus Desktop Terminal\x1b[0m                       \x1b[1;34m║\x1b[0m');
+    xterm.writeln('\x1b[1;34m╚══════════════════════════════════════════════════════════════╝\x1b[0m');
+    xterm.writeln('');
+    xterm.writeln('\x1b[90mType commands to execute. Use "nexus <command>" for Nexus CLI.\x1b[0m');
+    xterm.writeln('\x1b[90mPress Ctrl+C to cancel, Ctrl+L to clear.\x1b[0m');
+    xterm.writeln('');
+    printPrompt(xterm);
+  }, [printPrompt]);
+
+  // Execute command (reads from ref, not stale state)
+  const doExecute = useCallback(async (xterm: XTerm, command: string) => {
+    setCurrentCommand('');
+    currentCommandRef.current = '';
+    setIsExecuting(true);
+    isExecutingRef.current = true;
+
+    xterm.writeln('');
+    xterm.writeln(`\x1b[1;36mExecuting: ${command}\x1b[0m`);
+    xterm.writeln('');
+
+    try {
+      const output = await executeCommandRef.current!(command, currentProjectRef.current?.path);
+
+      const lines = output.split('\n');
+      lines.forEach((line) => {
+        xterm.writeln(line || ' ');
+      });
+
+      addTerminalOutputRef.current!({
+        id: crypto.randomUUID(),
+        command,
+        output,
+        status: 'completed',
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
+      });
+    } catch (error) {
+      const errorMessage = String(error);
+      xterm.writeln(`\x1b[1;31mError: ${errorMessage}\x1b[0m`);
+
+      addTerminalOutputRef.current!({
+        id: crypto.randomUUID(),
+        command,
+        output: errorMessage,
+        status: 'error',
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
+      });
+    } finally {
+      setIsExecuting(false);
+      isExecutingRef.current = false;
+      xterm.writeln('');
+      printPrompt(xterm);
+    }
+  }, [printPrompt]);
 
   // Initialize terminal
   useEffect(() => {
@@ -80,30 +159,31 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ onClose }) => {
     xtermRef.current = xterm;
     fitAddonRef.current = fitAddon;
 
-    // Print welcome message
     printWelcomeMessage(xterm);
 
-    // Handle input
+    // Handle input — reads from refs to avoid stale closures
     xterm.onData((data) => {
-      if (isExecuting) return; // Ignore input while executing
+      if (isExecutingRef.current) return;
 
       if (data === '\r') {
-        if (currentCommand.trim()) {
-          executeCurrentCommand();
+        const cmd = currentCommandRef.current.trim();
+        if (cmd) {
+          doExecute(xterm, cmd);
         }
       } else if (data === '\x7f') {
-        // Backspace
-        if (currentCommand.length > 0) {
-          setCurrentCommand((prev) => prev.slice(0, -1));
+        if (currentCommandRef.current.length > 0) {
+          currentCommandRef.current = currentCommandRef.current.slice(0, -1);
+          setCurrentCommand(currentCommandRef.current);
           xterm.write('\b \b');
         }
       } else if (data === '\x03') {
-        // Ctrl+C
         xterm.write('^C\n');
         printPrompt(xterm);
+        currentCommandRef.current = '';
         setCurrentCommand('');
       } else if (data >= ' ' && data <= '~') {
-        setCurrentCommand((prev) => prev + data);
+        currentCommandRef.current += data;
+        setCurrentCommand(currentCommandRef.current);
         xterm.write(data);
       }
     });
@@ -119,76 +199,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ onClose }) => {
       xterm.dispose();
       xtermRef.current = null;
     };
-  }, []);
-
-  // Print welcome message
-  const printWelcomeMessage = (xterm: XTerm) => {
-    xterm.writeln('\x1b[1;34m╔══════════════════════════════════════════════════════════════╗\x1b[0m');
-    xterm.writeln('\x1b[1;34m║\x1b[0m           \x1b[1;36mNexus Desktop Terminal\x1b[0m                       \x1b[1;34m║\x1b[0m');
-    xterm.writeln('\x1b[1;34m╚══════════════════════════════════════════════════════════════╝\x1b[0m');
-    xterm.writeln('');
-    xterm.writeln('\x1b[90mType commands to execute. Use "nexus <command>" for Nexus CLI.\x1b[0m');
-    xterm.writeln('\x1b[90mPress Ctrl+C to cancel, Ctrl+L to clear.\x1b[0m');
-    xterm.writeln('');
-    printPrompt(xterm);
-  };
-
-  // Print prompt
-  const printPrompt = (xterm: XTerm) => {
-    const cwd = currentProject?.path?.split('/').pop() || '~';
-    xterm.write(`\x1b[1;32mnexus\x1b[0m:\x1b[1;34m${cwd}\x1b[0m$ `);
-  };
-
-  // Execute command
-  const executeCurrentCommand = useCallback(async () => {
-    if (!xtermRef.current || !currentCommand.trim()) return;
-
-    const command = currentCommand.trim();
-    const xterm = xtermRef.current;
-
-    setCurrentCommand('');
-    setIsExecuting(true);
-
-    xterm.writeln('');
-    xterm.writeln(`\x1b[1;36mExecuting: ${command}\x1b[0m`);
-    xterm.writeln('');
-
-    try {
-      const output = await executeCommand(command, currentProject?.path);
-      
-      // Print output with proper line breaks
-      const lines = output.split('\n');
-      lines.forEach((line) => {
-        xterm.writeln(line || ' ');
-      });
-
-      // Add to history
-      addTerminalOutput({
-        id: crypto.randomUUID(),
-        command,
-        output,
-        status: 'completed',
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString(),
-      });
-    } catch (error) {
-      const errorMessage = String(error);
-      xterm.writeln(`\x1b[1;31mError: ${errorMessage}\x1b[0m`);
-
-      addTerminalOutput({
-        id: crypto.randomUUID(),
-        command,
-        output: errorMessage,
-        status: 'error',
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString(),
-      });
-    } finally {
-      setIsExecuting(false);
-      xterm.writeln('');
-      printPrompt(xterm);
-    }
-  }, [currentCommand, currentProject?.path, executeCommand, addTerminalOutput]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle copy
   const handleCopyTerminal = () => {
@@ -204,7 +215,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ onClose }) => {
   const clearTerminal = () => {
     xtermRef.current?.clear();
     setCurrentCommand('');
-    printWelcomeMessage(xtermRef.current!);
+    currentCommandRef.current = '';
+    if (xtermRef.current) printWelcomeMessage(xtermRef.current);
   };
 
   // Format duration
@@ -220,19 +232,20 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({ onClose }) => {
     'nexus --version',
     'nexus scan',
     'nexus status',
-    'nexus memory stats',
+    'nexus memory-stats',
     'git status',
     'git log --oneline -10',
   ];
 
   const executeQuickCommand = async (cmd: string) => {
     if (!xtermRef.current || isExecuting) return;
-    
+
+    currentCommandRef.current = cmd;
     setCurrentCommand(cmd);
     xtermRef.current.write(cmd);
     // Small delay to show the command before executing
     setTimeout(() => {
-      executeCurrentCommand();
+      if (xtermRef.current) doExecute(xtermRef.current, cmd);
     }, 100);
   };
 

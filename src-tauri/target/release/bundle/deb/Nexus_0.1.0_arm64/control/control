@@ -1,9 +1,0 @@
-Package: nexus
-Version: 0.1.0
-Architecture: arm64
-Installed-Size: 12407
-Maintainer: Nexus Team
-Priority: optional
-Depends: libwebkit2gtk-4.1-0, libgtk-3-0
-Description: Nexus Desktop App
- Visual interface for the Nexus CLI - manage agents, projects, and conversations with real-time streaming and file watching

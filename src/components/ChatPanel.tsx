@@ -13,6 +13,7 @@ import {
   Sparkles,
   Loader2,
 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { useNexusStore } from '../store/useNexusStore';
 import type { ChatMessage } from '../types';
 
@@ -219,7 +220,7 @@ export const ChatPanel: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
-  const { messages, addMessage, nexusStatus, isConnected } = useNexusStore();
+  const { messages, addMessage, updateChatStream, completeChatStream, nexusStatus, isConnected } = useNexusStore();
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -235,20 +236,43 @@ export const ChatPanel: React.FC = () => {
 
     setIsSending(true);
     const content = inputValue;
-    
-    try {
-      // Clear input immediately for better UX
-      setInputValue('');
-      setAttachments([]);
 
-      // Send message via Tauri
-      await addMessage({
-        role: 'user',
-        content,
-        attachments: attachments.map(a => ({ ...a, url: undefined })),
-      });
+    // Clear input immediately for better UX
+    setInputValue('');
+    setAttachments([]);
+
+    // Add user message locally for instant feedback
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content,
+      timestamp: new Date().toISOString(),
+    };
+    addMessage(userMessage);
+
+    // Create placeholder assistant message with streaming indicator
+    const assistantId = crypto.randomUUID();
+    const assistantPlaceholder: ChatMessage = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+      isStreaming: true,
+    };
+    addMessage(assistantPlaceholder);
+
+    try {
+      // Call backend
+      const response: string = await invoke('send_chat_message', { message: content });
+
+      // Update assistant message with real content
+      updateChatStream(assistantId, response);
+      completeChatStream(assistantId);
     } catch (error) {
+      const errMsg = String(error);
       console.error('Failed to send message:', error);
+      updateChatStream(assistantId, `Error: ${errMsg}`);
+      completeChatStream(assistantId);
     } finally {
       setIsSending(false);
     }

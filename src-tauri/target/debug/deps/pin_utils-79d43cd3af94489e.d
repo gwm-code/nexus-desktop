@@ -1,7 +1,0 @@
-/root/clawd/projects/nexus-desktop/src-tauri/target/debug/deps/pin_utils-79d43cd3af94489e.d: /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/lib.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/stack_pin.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/projection.rs
-
-/root/clawd/projects/nexus-desktop/src-tauri/target/debug/deps/libpin_utils-79d43cd3af94489e.rmeta: /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/lib.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/stack_pin.rs /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/projection.rs
-
-/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/lib.rs:
-/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/stack_pin.rs:
-/root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-utils-0.1.0/src/projection.rs:
