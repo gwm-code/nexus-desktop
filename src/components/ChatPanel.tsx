@@ -291,7 +291,7 @@ export const ChatPanel: React.FC = () => {
     'Optimize the React component re-renders',
   ];
 
-  const isDisabled = isSending || !isConnected();
+  const isDisabled = isSending || !isConnected;
 
   return (
     <div className="h-full flex flex-col bg-zinc-950">
@@ -304,7 +304,7 @@ export const ChatPanel: React.FC = () => {
           <div>
             <h2 className="text-sm font-semibold text-zinc-100">Nexus Assistant</h2>
             <div className="flex items-center gap-2">
-              {isConnected() ? (
+              {isConnected ? (
                 <>
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   <span className="text-xs text-zinc-500">
@@ -390,7 +390,7 @@ export const ChatPanel: React.FC = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isConnected() ? "Type your message..." : "Connect to Nexus CLI to chat..."}
+            placeholder={isConnected ? "Type your message..." : "Connect to Nexus CLI to chat..."}
             disabled={isDisabled}
             className="flex-1 bg-transparent border-none outline-none resize-none text-sm text-zinc-200 placeholder:text-zinc-600 py-2 max-h-32 min-h-[40px] disabled:opacity-50"
             rows={1}

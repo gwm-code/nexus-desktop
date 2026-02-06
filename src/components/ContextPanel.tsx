@@ -59,7 +59,7 @@ const getFileType = (filename: string): string => {
 };
 
 const FileTreeNode: React.FC<{ 
-  node: FileNode; 
+  node: any; 
   depth?: number;
   onToggle: (path: string) => void;
 }> = ({ node, depth = 0, onToggle }) => {
@@ -112,7 +112,7 @@ const FileTreeNode: React.FC<{
 
       {hasChildren && isExpanded && (
         <div>
-          {node.children!.map((child) => (
+          {node.children!.map((child: any) => (
             <FileTreeNode key={child.id} node={child} depth={depth + 1} onToggle={onToggle} />
           ))}
         </div>
@@ -181,11 +181,11 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({ onClose }) => {
   
   const context = useContext();
   const memoryStats = useMemoryStats();
-  const { 
-    fileTree, 
-    recentFiles, 
-    gitStatus, 
-  } = context;
+  
+  const fileTree = context?.fileTree || [];
+  const recentFiles = context?.recentFiles || [];
+  const gitStatus = context?.gitStatus;
+
   const { 
     toggleNode, 
     scanCurrentProject, 
@@ -213,9 +213,8 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({ onClose }) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }, []);
 
-  const filteredFiles = recentFiles.filter(
+  const filteredFiles = (recentFiles as string[]).filter(
     (file) =>
-      file.toLowerCase().includes(searchQuery.toLowerCase()) ||
       file.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -330,7 +329,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({ onClose }) => {
                   <p className="text-xs mt-1 opacity-70">Select a project to view files</p>
                 </div>
               ) : (
-                fileTree.map((node) => (
+                fileTree.map((node: any) => (
                   <FileTreeNode key={node.id} node={node} onToggle={toggleNode} />
                 ))
               )}
@@ -346,7 +345,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({ onClose }) => {
                   <Clock className="w-3 h-3 text-zinc-600" />
                 </div>
                 <div className="space-y-1">
-                  {filteredFiles.slice(0, 5).map((file, index) => (
+                  {filteredFiles.slice(0, 5).map((file: any, index: number) => (
                     <button
                       key={index}
                       className="flex items-center gap-2 w-full p-1.5 hover:bg-zinc-800/50 rounded text-left transition-colors group"
