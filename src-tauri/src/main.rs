@@ -785,15 +785,36 @@ async fn set_oauth_credentials(
 #[tauri::command]
 async fn oauth_authorize(
     provider: String,
-    state: State<'_, NexusState>
+    state: State<'_, NexusState>,
+    app: tauri::AppHandle
 ) -> Result<String, String> {
+    eprintln!("[Tauri] Starting OAuth authorization for provider: {}", provider);
+
     let raw = execute_nexus_bridge(&["--json", "oauth", "authorize", &provider], &state).await?;
+    eprintln!("[Tauri] OAuth CLI response: {}", raw);
 
     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) {
         if json["success"].as_bool() == Some(true) {
-            return Ok("OAuth authorization completed successfully".to_string());
+            // Extract auth URL from response
+            if let Some(auth_url) = json["data"]["auth_url"].as_str() {
+                eprintln!("[Tauri] Opening browser with URL: {}", auth_url);
+
+                // Open browser locally
+                if let Err(e) = open::that(auth_url) {
+                    eprintln!("[Tauri] Failed to open browser: {:?}", e);
+                    return Err(format!("Failed to open browser: {}", e));
+                }
+
+                eprintln!("[Tauri] Browser opened successfully");
+                return Ok("Browser opened for OAuth authorization".to_string());
+            } else {
+                eprintln!("[Tauri] No auth_url in response");
+            }
+            return Ok("OAuth authorization started".to_string());
         } else {
-            return Err(json["error"].as_str().unwrap_or("OAuth authorization failed").to_string());
+            let error = json["error"].as_str().unwrap_or("OAuth authorization failed").to_string();
+            eprintln!("[Tauri] OAuth error: {}", error);
+            return Err(error);
         }
     }
 
