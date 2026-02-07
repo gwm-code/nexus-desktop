@@ -186,9 +186,6 @@ const ProviderTab: React.FC = () => {
   const [savingKey, setSavingKey] = useState(false);
 
   // OAuth state
-  const [oauthClientId, setOauthClientId] = useState('');
-  const [oauthClientSecret, setOauthClientSecret] = useState('');
-  const [showOauthSecret, setShowOauthSecret] = useState(false);
   const [authorizingOAuth, setAuthorizingOAuth] = useState(false);
   const [oauthStatus, setOauthStatus] = useState<{authorized: boolean; expiresAt?: string} | null>(null);
 
@@ -249,34 +246,29 @@ const ProviderTab: React.FC = () => {
   }, [activeProvider]);
 
   const handleOAuthAuthorize = async () => {
-    if (!oauthClientId.trim() || !oauthClientSecret.trim()) return;
     setAuthorizingOAuth(true);
     try {
-      // Save OAuth credentials
-      await invoke('set_oauth_credentials', {
-        provider: activeProvider,
-        clientId: oauthClientId.trim(),
-        clientSecret: oauthClientSecret.trim(),
-      });
+      // Start OAuth flow - opens browser automatically
+      await invoke('oauth_authorize', { provider: activeProvider });
 
-      // Get auth URL and open browser
-      const authUrl: string = await invoke('oauth_authorize', { provider: activeProvider });
+      // Refresh OAuth status after a moment
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const status: {authorized: boolean; expiresAt?: string} = await invoke('oauth_check_status', { provider: activeProvider });
+      setOauthStatus(status);
 
-      // Open in browser (use Tauri shell)
-      window.open(authUrl, '_blank');
-
-      // Poll for completion
-      for (let i = 0; i < 30; i++) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const status: {authorized: boolean; expiresAt?: string} = await invoke('oauth_check_status', { provider: activeProvider });
-        if (status.authorized) {
-          setOauthStatus(status);
-          useNexusStore.getState().addToast({ type: 'success', title: 'OAuth Authorized!', message: `Successfully authorized ${activeProvider}` });
-          break;
-        }
+      if (status.authorized) {
+        useNexusStore.getState().addToast({
+          type: 'success',
+          title: 'OAuth Authorized!',
+          message: `Successfully authorized ${activeProvider}`
+        });
       }
     } catch (e) {
-      useNexusStore.getState().addToast({ type: 'error', title: 'OAuth Failed', message: String(e) });
+      useNexusStore.getState().addToast({
+        type: 'error',
+        title: 'OAuth Failed',
+        message: String(e)
+      });
     } finally {
       setAuthorizingOAuth(false);
     }
@@ -384,56 +376,33 @@ const ProviderTab: React.FC = () => {
             </div>
 
             {oauthStatus?.authorized ? (
-              <div className="flex items-center gap-2 text-xs text-green-400">
-                <Check className="w-4 h-4" />
-                <span>Authorized</span>
-                {oauthStatus.expiresAt && (
-                  <span className="text-zinc-500">• Expires: {oauthStatus.expiresAt}</span>
-                )}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-green-400">
+                  <Check className="w-4 h-4" />
+                  <span>Authorized</span>
+                  {oauthStatus.expiresAt && (
+                    <span className="text-zinc-500">
+                      • Expires: {new Date(oauthStatus.expiresAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-400">
+                  You're authenticated and ready to use {
+                    activeProvider === 'google' ? 'Google Gemini' :
+                    activeProvider === 'claude' ? 'Anthropic Claude' :
+                    'OpenAI'
+                  }
+                </p>
               </div>
             ) : (
               <>
-                <div className="space-y-2">
-                  <label className={labelClass}>OAuth Client ID</label>
-                  <input
-                    type="text"
-                    value={oauthClientId}
-                    onChange={(e) => setOauthClientId(e.target.value)}
-                    className={inputClass}
-                    placeholder={
-                      activeProvider === 'google' ? 'xxxxx.apps.googleusercontent.com' :
-                      activeProvider === 'claude' ? 'claude_client_id' :
-                      'client_id'
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className={labelClass}>OAuth Client Secret</label>
-                  <div className="relative">
-                    <input
-                      type={showOauthSecret ? 'text' : 'password'}
-                      value={oauthClientSecret}
-                      onChange={(e) => setOauthClientSecret(e.target.value)}
-                      className={`${inputClass} pr-10`}
-                      placeholder={
-                        activeProvider === 'google' ? 'GOCSPX-...' :
-                        activeProvider === 'claude' ? 'secret_...' :
-                        'client_secret'
-                      }
-                    />
-                    <button
-                      onClick={() => setShowOauthSecret(!showOauthSecret)}
-                      className="absolute right-3 top-2.5 text-zinc-600 hover:text-zinc-400"
-                    >
-                      {showOauthSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+                <p className="text-[10px] text-blue-300">
+                  Click below to securely authenticate. Your browser will open for login.
+                </p>
 
                 <button
                   onClick={handleOAuthAuthorize}
-                  disabled={!oauthClientId.trim() || !oauthClientSecret.trim() || authorizingOAuth}
+                  disabled={authorizingOAuth}
                   className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
                   {authorizingOAuth ? (
@@ -444,29 +413,14 @@ const ProviderTab: React.FC = () => {
                   ) : (
                     <>
                       <Shield className="w-4 h-4" />
-                      Authorize with {activeProvider === 'google' ? 'Google' : activeProvider === 'claude' ? 'Anthropic' : 'OpenAI'}
+                      Login with {
+                        activeProvider === 'google' ? 'Google' :
+                        activeProvider === 'claude' ? 'Anthropic' :
+                        'OpenAI'
+                      }
                     </>
                   )}
                 </button>
-
-                <p className="text-[10px] text-blue-400/80">
-                  Get credentials from:{' '}
-                  {activeProvider === 'google' && (
-                    <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" className="underline hover:text-blue-200">
-                      Google Cloud Console
-                    </a>
-                  )}
-                  {activeProvider === 'claude' && (
-                    <a href="https://console.anthropic.com/settings/oauth" target="_blank" rel="noopener" className="underline hover:text-blue-200">
-                      Anthropic Console
-                    </a>
-                  )}
-                  {activeProvider === 'openai' && (
-                    <a href="https://platform.openai.com/settings/organization/oauth" target="_blank" rel="noopener" className="underline hover:text-blue-200">
-                      OpenAI Platform
-                    </a>
-                  )}
-                </p>
               </>
             )}
           </div>
