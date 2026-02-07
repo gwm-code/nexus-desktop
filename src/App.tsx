@@ -5,68 +5,70 @@ import { WifiOff, RefreshCw } from 'lucide-react';
 import './App.css';
 
 function App() {
+  console.log('[App] App component function called');
   const [isInitializing, setIsInitializing] = useState(true);
+  console.log('[App] useState initialized, isInitializing:', isInitializing);
   const { checkNexusStatus, initializeTauriListeners, backend } = useNexusStore();
+  console.log('[App] useNexusStore hook complete');
 
   useEffect(() => {
+    console.log('[App] useEffect triggered');
+
+    // Use a hard timeout to show UI no matter what
+    const forceShowUI = setTimeout(() => {
+      console.warn('[App] Force showing UI after 3 seconds');
+      setIsInitializing(false);
+    }, 3000);
+
     // Initialize Tauri listeners and check connection
     const init = async () => {
       try {
+        console.log('[App] Starting initialization...');
+
+        // Check if window.__TAURI__ is available
+        if (typeof window !== 'undefined' && !(window as any).__TAURI__) {
+          console.error('[App] Tauri runtime not available!');
+          setIsInitializing(false);
+          clearTimeout(forceShowUI);
+          return;
+        }
+
+        console.log('[App] Tauri runtime detected');
         await initializeTauriListeners();
-        await checkNexusStatus();
+        console.log('[App] Tauri listeners initialized');
+
+        // Try status check with aggressive timeout
+        try {
+          const statusPromise = checkNexusStatus();
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Status check timeout')), 2000)
+          );
+
+          await Promise.race([statusPromise, timeoutPromise]);
+          console.log('[App] Status check completed');
+        } catch (statusError) {
+          console.warn('[App] Status check failed or timed out:', statusError);
+          // Continue anyway - user can configure later
+        }
       } catch (error) {
-        console.error('Failed to initialize:', error);
+        console.error('[App] Failed to initialize:', error);
       } finally {
+        console.log('[App] Initialization complete, showing UI');
+        clearTimeout(forceShowUI);
         setIsInitializing(false);
       }
     };
 
     init();
 
-    // Smart status polling with exponential backoff
-    let pollInterval = 5000; // Start at 5s
-    let lastActivity = Date.now();
-    let intervalId: NodeJS.Timeout;
+    // Simple status polling - check every 10 seconds
+    const interval = setInterval(() => {
+      checkNexusStatus().catch(err => {
+        console.error('[App] Status check failed:', err);
+      });
+    }, 10000);
 
-    const schedulePoll = () => {
-      const timeSinceActivity = Date.now() - lastActivity;
-
-      // Fast polling when active (< 1 min idle)
-      if (timeSinceActivity < 60000) {
-        pollInterval = 5000; // 5s
-      }
-      // Medium polling when recently active (1-5 min idle)
-      else if (timeSinceActivity < 300000) {
-        pollInterval = 15000; // 15s
-      }
-      // Slow polling when idle (5+ min)
-      else {
-        pollInterval = 60000; // 60s
-      }
-
-      intervalId = setTimeout(() => {
-        checkNexusStatus();
-        schedulePoll();
-      }, pollInterval);
-    };
-
-    // Track user activity
-    const resetActivity = () => {
-      lastActivity = Date.now();
-    };
-
-    window.addEventListener('click', resetActivity);
-    window.addEventListener('keypress', resetActivity);
-    window.addEventListener('focus', resetActivity);
-
-    schedulePoll();
-
-    return () => {
-      clearTimeout(intervalId);
-      window.removeEventListener('click', resetActivity);
-      window.removeEventListener('keypress', resetActivity);
-      window.removeEventListener('focus', resetActivity);
-    };
+    return () => clearInterval(interval);
   }, [checkNexusStatus, initializeTauriListeners]);
 
   if (isInitializing) {

@@ -248,9 +248,34 @@ async fn execute_shell_bridge(command: &str, working_dir: Option<&str>, state: &
 
 #[tauri::command]
 async fn get_nexus_status(state: State<'_, NexusState>) -> Result<NexusStatus, String> {
+    eprintln!("[Tauri] get_nexus_status called");
+
     // Detect connection mode
     let ssh_session = state.ssh_session.lock().await;
     let has_ssh = ssh_session.is_some();
+    drop(ssh_session); // Release lock early
+
+    eprintln!("[Tauri] SSH session check: has_ssh={}", has_ssh);
+
+    // If no SSH configured, return disconnected immediately (don't block on local CLI check)
+    if !has_ssh {
+        eprintln!("[Tauri] No SSH configured, returning disconnected status immediately");
+        return Ok(NexusStatus {
+            daemon_running: false,
+            daemon_port: None,
+            version: "Not Connected".to_string(),
+            platform: std::env::consts::OS.to_string(),
+            nexus_installed: false,
+            current_project: None,
+            provider: None,
+            model: None,
+            connection_mode: Some("none".to_string()),
+            ssh_latency: None,
+            remote_nexus_installed: Some(false),
+        });
+    }
+
+    eprintln!("[Tauri] SSH is configured, proceeding with status check...");
 
     // Measure SSH latency if connected
     let ssh_latency = if has_ssh {
