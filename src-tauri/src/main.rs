@@ -279,14 +279,19 @@ async fn get_nexus_status(state: State<'_, NexusState>) -> Result<NexusStatus, S
 
     // Measure SSH latency if connected
     let ssh_latency = if has_ssh {
+        eprintln!("[Tauri] Measuring SSH latency...");
         let start = std::time::Instant::now();
         let _ = execute_nexus_bridge(&["--version"], &state).await;
-        Some(start.elapsed().as_millis() as u64)
+        let latency = start.elapsed().as_millis() as u64;
+        eprintln!("[Tauri] SSH latency measured: {}ms", latency);
+        Some(latency)
     } else {
         None
     };
 
+    eprintln!("[Tauri] Executing 'nexus --json info'...");
     let raw = execute_nexus_bridge(&["--json", "info"], &state).await.unwrap_or_default();
+    eprintln!("[Tauri] Got response from 'nexus --json info': {} bytes", raw.len());
 
     // Try to parse JSON response
     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&raw) {
