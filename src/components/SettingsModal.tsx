@@ -231,7 +231,7 @@ const ProviderTab: React.FC = () => {
   // Check OAuth status when provider changes
   useEffect(() => {
     const checkOAuth = async () => {
-      if (['google', 'claude', 'openai'].includes(activeProvider)) {
+      if (['claude', 'openai'].includes(activeProvider)) {
         try {
           const status: {authorized: boolean; provider: string; expiresAt?: string} = await invoke('oauth_check_status', { provider: activeProvider });
           setOauthStatus({ authorized: status.authorized, expiresAt: status.expiresAt });
@@ -257,6 +257,9 @@ const ProviderTab: React.FC = () => {
       setOauthStatus(status);
 
       if (status.authorized) {
+        // Refresh model list now that we're authenticated
+        await loadAvailableModels(activeProvider);
+
         useNexusStore.getState().addToast({
           type: 'success',
           title: 'OAuth Authorized!',
@@ -366,8 +369,8 @@ const ProviderTab: React.FC = () => {
         <span>Authentication</span>
       </div>
 
-      {/* OAuth UI for providers that support it */}
-      {['google', 'claude', 'openai'].includes(activeProvider) && (
+      {/* OAuth UI for providers that support it (NOT Google - Gemini uses API keys) */}
+      {['claude', 'openai'].includes(activeProvider) && (
         <div className="space-y-4">
           <div className="bg-blue-600/10 border border-blue-500/20 rounded-lg p-3 space-y-3">
             <div className="flex items-center gap-2 text-xs font-medium text-blue-300">
