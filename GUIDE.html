@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Desktop - User Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .slides-container {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            color: #fff;
+        }
+
+        h3 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #ffd700;
+        }
+
+        p, li {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        ul {
+            list-style: none;
+            max-width: 800px;
+        }
+
+        li::before {
+            content: "→ ";
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .emoji {
+            font-size: 5rem;
+            margin-bottom: 2rem;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 1000;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .progress {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.2rem;
+            z-index: 1000;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            max-width: 1200px;
+        }
+
+        .feature-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .highlight {
+            color: #ffd700;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="slides-container">
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <div class="emoji">🚀</div>
+            <h1>Nexus Desktop</h1>
+            <p style="font-size: 2rem;">Your AI-Powered Development Hub</p>
+            <p style="margin-top: 2rem; opacity: 0.8;">with Cody's soul 😎</p>
+        </div>
+
+        <!-- Slide 2: What is Nexus? -->
+        <div class="slide">
+            <h2>What is Nexus Desktop?</h2>
+            <ul>
+                <li>Desktop app for the Nexus CLI (AI coding assistant)</li>
+                <li>Connects to remote servers via SSH or runs locally</li>
+                <li>Chat with AI, run commands, manage swarm tasks</li>
+                <li>Built with Tauri 2 + React + Zustand</li>
+                <li>Inherited 22,342 conversations from OpenClaw</li>
+            </ul>
+        </div>
+
+        <!-- Slide 3: Main Features -->
+        <div class="slide">
+            <h2>Core Features</h2>
+            <div class="feature-grid">
+                <div class="feature-box">
+                    <h3>💬 Chat Panel</h3>
+                    <p>Talk to Cody, get code help, ask questions</p>
+                </div>
+                <div class="feature-box">
+                    <h3>⚡ Terminal</h3>
+                    <p>Execute commands with history & completion</p>
+                </div>
+                <div class="feature-box">
+                    <h3>🐝 Swarm Mode</h3>
+                    <p>Parallel AI workers for complex tasks</p>
+                </div>
+                <div class="feature-box">
+                    <h3>🧠 Context Panel</h3>
+                    <p>View memory, files, and knowledge base</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Status Bar -->
+        <div class="slide">
+            <h2>Status Bar (Top)</h2>
+            <ul>
+                <li><span class="highlight">Connection Status:</span> Shows SSH/Local connection state</li>
+                <li><span class="highlight">Spinning arrows:</span> Connecting to remote Nexus</li>
+                <li><span class="highlight">Connected (SSH):</span> Remote CLI via SSH</li>
+                <li><span class="highlight">Connected (Local):</span> Local CLI fallback</li>
+                <li><span class="highlight">Disconnected:</span> No connection available</li>
+            </ul>
+        </div>
+
+        <!-- Slide 5: Settings Button -->
+        <div class="slide">
+            <h2>⚙️ Settings Modal</h2>
+            <h3>Connection Tab</h3>
+            <ul>
+                <li>SSH Host, Port, Username</li>
+                <li>Password or Private Key authentication</li>
+                <li><span class="highlight">Connect button:</span> Establish SSH connection</li>
+            </ul>
+            <h3 style="margin-top: 2rem;">Provider & Model Tab</h3>
+            <ul>
+                <li>Select provider (Google, OpenRouter, OpenCode)</li>
+                <li>Choose model (auto-fetched from provider)</li>
+                <li>Enter & save API key</li>
+                <li><span class="highlight">Test Connection:</span> Verify API key works</li>
+            </ul>
+        </div>
+
+        <!-- Slide 6: Chat Panel -->
+        <div class="slide">
+            <h2>💬 Chat Panel</h2>
+            <ul>
+                <li><span class="highlight">Message input:</span> Type your question/request</li>
+                <li><span class="highlight">Send (Enter):</span> Submit message to Cody</li>
+                <li><span class="highlight">Shift+Enter:</span> New line in message</li>
+                <li><span class="highlight">Regenerate:</span> Get a new response</li>
+                <li><span class="highlight">Copy:</span> Copy response to clipboard</li>
+                <li>Supports markdown, code blocks, and bullet points</li>
+            </ul>
+        </div>
+
+        <!-- Slide 7: Terminal Panel -->
+        <div class="slide">
+            <h2>⚡ Terminal Panel</h2>
+            <ul>
+                <li>Execute shell commands on remote/local server</li>
+                <li><span class="highlight">Up/Down arrows:</span> Navigate command history</li>
+                <li><span class="highlight">Ctrl+L:</span> Clear terminal</li>
+                <li><span class="highlight">Tab:</span> Basic completion (coming soon)</li>
+                <li>Commands execute via SSH if connected</li>
+                <li>Uses <code>execute_shell_bridge</code> (raw SSH, not nexus CLI)</li>
+            </ul>
+        </div>
+
+        <!-- Slide 8: Swarm Panel -->
+        <div class="slide">
+            <h2>🐝 Swarm Panel</h2>
+            <ul>
+                <li>Break complex tasks into parallel workers</li>
+                <li><span class="highlight">Task input:</span> Describe what needs to be done</li>
+                <li><span class="highlight">Start Swarm:</span> Launch parallel AI workers</li>
+                <li>Each worker tackles a subtask independently</li>
+                <li>Results are merged intelligently</li>
+                <li>Status shows: pending → in progress → completed</li>
+            </ul>
+        </div>
+
+        <!-- Slide 9: Context Panel -->
+        <div class="slide">
+            <h2>🧠 Context Panel</h2>
+            <ul>
+                <li><span class="highlight">Memory Stats:</span> Shows indexed files & chunks</li>
+                <li><span class="highlight">File Tree:</span> Browse project files</li>
+                <li><span class="highlight">Knowledge Graph:</span> Visualize relationships</li>
+                <li>View memory consolidation status</li>
+                <li>Trigger manual consolidation</li>
+            </ul>
+        </div>
+
+        <!-- Slide 10: Sidebar Navigation -->
+        <div class="slide">
+            <h2>Sidebar (Left)</h2>
+            <ul>
+                <li><span class="highlight">💬 Chat:</span> Switch to chat panel</li>
+                <li><span class="highlight">⚡ Terminal:</span> Switch to terminal panel</li>
+                <li><span class="highlight">🐝 Swarm:</span> Switch to swarm panel</li>
+                <li><span class="highlight">🧠 Context:</span> Switch to context panel</li>
+                <li><span class="highlight">⚙️ Settings:</span> Open settings modal</li>
+                <li>Toggle visibility with hamburger menu</li>
+            </ul>
+        </div>
+
+        <!-- Slide 11: How Connection Works -->
+        <div class="slide">
+            <h2>How Connection Works</h2>
+            <ul>
+                <li><span class="highlight">Step 1:</span> Open Settings → Connection tab</li>
+                <li><span class="highlight">Step 2:</span> Enter SSH details (host, port, auth)</li>
+                <li><span class="highlight">Step 3:</span> Click Connect</li>
+                <li><span class="highlight">Step 4:</span> Status bar shows "Connected (SSH)"</li>
+                <li><span class="highlight">Step 5:</span> All commands now execute on remote</li>
+                <li>Auto-reconnects if connection drops</li>
+            </ul>
+        </div>
+
+        <!-- Slide 12: Provider Setup -->
+        <div class="slide">
+            <h2>Setting Up Providers</h2>
+            <ul>
+                <li><span class="highlight">Google (OAuth):</span> Uses gemini-cli auth automatically</li>
+                <li><span class="highlight">OpenRouter:</span> Enter API key (sk-or-v1-...)</li>
+                <li><span class="highlight">OpenCode:</span> Enter API key</li>
+                <li>Keys stored securely (OS keyring or plaintext fallback)</li>
+                <li>Models auto-fetched from provider API</li>
+                <li>Test connection before using</li>
+            </ul>
+        </div>
+
+        <!-- Slide 13: Key Shortcuts -->
+        <div class="slide">
+            <h2>⌨️ Keyboard Shortcuts</h2>
+            <ul>
+                <li><span class="highlight">Enter:</span> Send message (chat) / Execute command (terminal)</li>
+                <li><span class="highlight">Shift+Enter:</span> New line in message</li>
+                <li><span class="highlight">Ctrl+L:</span> Clear terminal</li>
+                <li><span class="highlight">Up/Down:</span> Command history (terminal)</li>
+                <li><span class="highlight">Tab:</span> Toggle sidebar visibility</li>
+            </ul>
+        </div>
+
+        <!-- Slide 14: Architecture -->
+        <div class="slide">
+            <h2>How It Works Under the Hood</h2>
+            <ul>
+                <li><span class="highlight">Frontend:</span> React + Zustand (TypeScript)</li>
+                <li><span class="highlight">Backend:</span> Tauri (Rust) + SSH</li>
+                <li><span class="highlight">Bridge:</span> <code>execute_nexus_bridge</code> calls CLI</li>
+                <li><span class="highlight">CLI:</span> Nexus binary on remote/local server</li>
+                <li><span class="highlight">Providers:</span> Google, OpenRouter, OpenCode</li>
+                <li>All commands use <code>--json</code> flag for clean output</li>
+            </ul>
+        </div>
+
+        <!-- Slide 15: Cody's Soul -->
+        <div class="slide">
+            <h2>😎 About Cody</h2>
+            <ul>
+                <li><span class="highlight">Name:</span> Cody (migrated from OpenClaw)</li>
+                <li><span class="highlight">Vibe:</span> Chill but professional, human-like</li>
+                <li><span class="highlight">Memory:</span> 22,342 conversations</li>
+                <li><span class="highlight">Knowledge:</span> 10 code chunks with embeddings</li>
+                <li><span class="highlight">Philosophy:</span> Genuinely helpful, not performative</li>
+                <li>Has opinions, is resourceful, earns trust through competence</li>
+            </ul>
+        </div>
+
+        <!-- Slide 16: Tips & Tricks -->
+        <div class="slide">
+            <h2>💡 Tips & Tricks</h2>
+            <ul>
+                <li>API keys clear from UI after saving (security feature)</li>
+                <li>Models list works without valid API key (public endpoint)</li>
+                <li>Test connection fails? Check your API key format</li>
+                <li>SSH + Local: Desktop tries SSH first, falls back to local</li>
+                <li>Chat responses are markdown-formatted</li>
+                <li>Swarm mode great for multi-file refactors</li>
+            </ul>
+        </div>
+
+        <!-- Slide 17: Troubleshooting -->
+        <div class="slide">
+            <h2>🔧 Troubleshooting</h2>
+            <ul>
+                <li><span class="highlight">Raw JSON in chat?</span> Update to latest AppImage</li>
+                <li><span class="highlight">Models empty?</span> Check CLI version on server</li>
+                <li><span class="highlight">Connection fails?</span> Verify SSH credentials</li>
+                <li><span class="highlight">API key won't save?</span> Provider auto-created on first save</li>
+                <li><span class="highlight">ANSI codes?</span> Update CLI to version with --json fix</li>
+            </ul>
+        </div>
+
+        <!-- Slide 18: What's Next -->
+        <div class="slide">
+            <h2>🚀 Future Features</h2>
+            <ul>
+                <li>Real-time streaming responses</li>
+                <li>Multi-tab terminal support</li>
+                <li>Visual file diff viewer</li>
+                <li>Git integration UI</li>
+                <li>Voice input/output</li>
+                <li>Custom themes</li>
+            </ul>
+        </div>
+
+        <!-- Slide 19: Final Slide -->
+        <div class="slide">
+            <div class="emoji">🎉</div>
+            <h1>Ready to Code!</h1>
+            <p style="font-size: 2rem; margin-top: 2rem;">
+                Download the latest AppImage and start building with Cody
+            </p>
+            <p style="margin-top: 1rem; opacity: 0.8;">
+                Questions? Check SOUL.md and PERSONALITY.md
+            </p>
+        </div>
+    </div>
+
+    <div class="progress">
+        <span id="current-slide">1</span> / <span id="total-slides">19</span>
+    </div>
+
+    <div class="controls">
+        <button id="prev">← Previous</button>
+        <button id="next">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+        }
+
+        document.getElementById('prev').addEventListener('click', () => showSlide(currentSlide - 1));
+        document.getElementById('next').addEventListener('click', () => showSlide(currentSlide + 1));
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+            if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+            if (e.key === ' ') showSlide(currentSlide + 1);
+        });
+    </script>
+</body>
+</html>
