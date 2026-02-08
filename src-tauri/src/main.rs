@@ -514,7 +514,7 @@ async fn send_chat_message_stream(
         let cmd = format!("nexus --json chat \"{}\"", message.replace('"', "\\\""));
         channel.exec(&cmd).map_err(|e| e.to_string())?;
 
-        // Read incrementally in small chunks
+        // Buffer all output first
         let mut buf = [0u8; 1024];
         let mut full_output = String::new();
         loop {
@@ -523,10 +523,6 @@ async fn send_chat_message_stream(
                 Ok(n) => {
                     let chunk = String::from_utf8_lossy(&buf[..n]).to_string();
                     full_output.push_str(&chunk);
-                    let _ = app.emit("nexus://chat-chunk", serde_json::json!({
-                        "messageId": message_id,
-                        "chunk": chunk,
-                    }));
                 }
                 Err(e) => {
                     let _ = app.emit("nexus://chat-error", serde_json::json!({
@@ -539,14 +535,30 @@ async fn send_chat_message_stream(
         }
         channel.wait_close().ok();
 
-        // Parse final response for chat history
+        // Parse JSON and extract response content
         let content = if let Ok(json) = serde_json::from_str::<serde_json::Value>(&full_output) {
             if json["success"].as_bool() == Some(true) {
-                json["data"]["response"].as_str().unwrap_or(&full_output).to_string()
+                let response = json["data"]["response"].as_str().unwrap_or(&full_output).to_string();
+                // Emit the parsed response content, not raw JSON
+                let _ = app.emit("nexus://chat-chunk", serde_json::json!({
+                    "messageId": message_id,
+                    "chunk": response.clone(),
+                }));
+                response
             } else {
+                let error = json["error"].as_str().unwrap_or("Unknown error").to_string();
+                let _ = app.emit("nexus://chat-error", serde_json::json!({
+                    "messageId": message_id,
+                    "error": error,
+                }));
                 full_output.clone()
             }
         } else {
+            // Not JSON, send as-is
+            let _ = app.emit("nexus://chat-chunk", serde_json::json!({
+                "messageId": message_id,
+                "chunk": full_output.clone(),
+            }));
             full_output
         };
 
