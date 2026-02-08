@@ -731,7 +731,7 @@ async fn list_models(provider: String, state: State<'_, NexusState>) -> Result<V
         if json["success"].as_bool() == Some(true) {
             if let Some(models) = json["data"]["models"].as_array() {
                 return Ok(models.iter()
-                    .filter_map(|m| m.as_str().map(|s| s.to_string()))
+                    .filter_map(|m| m["id"].as_str().map(|s| s.to_string()))
                     .collect());
             }
         }
